@@ -1,0 +1,32 @@
+#install tempo operator
+oc create -f tempo-subscription.yaml
+
+#install otel operator
+oc create -f otel-subscription.yml
+
+#create s3 bucket with minio
+oc create -f minio.yaml
+
+#rbac for reading traces
+oc create -f multi-tenant/traces-reader-rbac.yaml
+
+#create a multi-tenant instance of tempo
+oc create -f multi-tenant/tempo-multitenant.yaml
+
+#create otel collector
+oc apply -f otel-collector.yaml
+
+#create otel instrumentation
+oc apply -f instrumentation.yaml
+
+#deploy app
+oc apply -f app.yaml
+
+#patch app deployments to inject instrumentation
+kubectl patch deployment frontend-deployment -n tracing -p '{"spec": {"template":{"metadata":{"annotations":{"instrumentation.opentelemetry.io/inject-sdk":"true"}}}} }'
+
+kubectl patch deployment backend1-deployment -n tracing -p '{"spec": {"template":{"metadata":{"annotations":{"instrumentation.opentelemetry.io/inject-python":"true"}}}} }'
+
+kubectl patch deployment backend2-deployment -n tracing -p '{"spec": {"template":{"metadata":{"annotations":{"instrumentation.opentelemetry.io/inject-java":"true"}}}} }'
+
+
